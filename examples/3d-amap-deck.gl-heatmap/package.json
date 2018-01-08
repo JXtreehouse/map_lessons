@@ -1,0 +1,32 @@
+{
+  "name": "3d-amap-deck.gl-heatmap",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start-local": "webpack-dev-server --env.local --progress --hot --open",
+    "start": "webpack-dev-server --progress --hot --open"
+  },
+  "keywords": [
+    "d3",
+    "amap",
+    "deck.gl"
+  ],
+  "author": "AlexZ33",
+  "license": "MIT",
+  "dependencies": {
+    "d3-request": "^1.0.6",
+    "deck.gl": "^5.0.1",
+    "luma.gl": "^5.0.1",
+    "react": "^16.2.0",
+    "react-amap": "^1.2.0",
+    "react-dom": "^16.2.0",
+    "react-map-gl": "^3.1.5"
+  },
+  "devDependencies": {
+    "buble-loader": "^0.4.0",
+    "webpack": "^2.2.0",
+    "webpack-dev-server": "^2.2.0"
+  }
+}

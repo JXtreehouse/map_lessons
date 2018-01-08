@@ -1,0 +1,7 @@
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = "\n#define SHADER_NAME mesh-layer-vs\n\n// Scale the model\nuniform float sizeScale;\n\n// Primitive attributes\nattribute vec3 positions;\nattribute vec3 normals;\nattribute vec2 texCoords;\n\n// Instance attributes\nattribute vec3 instancePositions;\nattribute float instanceAngles;\nattribute vec4 instanceColors;\nattribute vec3 instancePickingColors;\n\n// Outputs to fragment shader\nvarying vec2 vTexCoord;\nvarying vec4 vColor;\nvarying float vLightWeight;\n\nvoid main(void) {\n  vec3 instancePos = project_position(instancePositions);\n\n  float angle = instanceAngles;\n  mat2 rotationMatrix = mat2(cos(angle), -sin(angle), sin(angle), cos(angle));\n\n  vec3 pos = positions;\n  pos = project_scale(pos * sizeScale);\n  pos = vec3(rotationMatrix * pos.xy, pos.z);\n  gl_Position = project_to_clipspace(vec4(instancePos + pos, 1.0));\n\n  // TODO - transform normals\n\n  picking_setPickingColor(instancePickingColors);\n\n  vTexCoord = texCoords;\n  vColor = instanceColors;\n  vLightWeight = getLightWeight(pos, normals);\n}\n";
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IiIsImZpbGUiOiJtZXNoLWxheWVyLXZlcnRleC5nbHNsLmpzIiwic291cmNlc0NvbnRlbnQiOltdfQ==

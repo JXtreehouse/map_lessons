@@ -1,0 +1,61 @@
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.transformVector = transformVector;
+exports.createMat4 = createMat4;
+exports.extractCameraVectors = extractCameraVectors;
+exports.mod = mod;
+
+var _multiply = require('gl-vec4/multiply');
+
+var _multiply2 = _interopRequireDefault(_multiply);
+
+var _transformMat = require('gl-vec4/transformMat4');
+
+var _transformMat2 = _interopRequireDefault(_transformMat);
+
+var _assert = require('assert');
+
+var _assert2 = _interopRequireDefault(_assert);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function transformVector(matrix, vector) {
+  // Handle non-invertible matrix
+  if (!matrix) {
+    return null;
+  }
+  var result = (0, _transformMat2.default)([0, 0, 0, 0], vector, matrix);
+  var scale = 1 / result[3];
+  (0, _multiply2.default)(result, result, [scale, scale, scale, scale]);
+  return result;
+}
+
+// Helper, avoids low-precision 32 bit matrices from gl-matrix mat4.create()
+// Extensions to math.gl library. Intended to be folded back.
+
+function createMat4() {
+  return [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+}
+
+// Extract camera vectors (move to math library?)
+function extractCameraVectors(_ref) {
+  var viewMatrix = _ref.viewMatrix,
+      viewMatrixInverse = _ref.viewMatrixInverse;
+
+  // Read the translation from the inverse view matrix
+  return {
+    eye: [viewMatrixInverse[12], viewMatrixInverse[13], viewMatrixInverse[14]],
+    direction: [viewMatrix[2], viewMatrix[6], viewMatrix[10]],
+    up: [viewMatrix[1], viewMatrix[5], viewMatrix[9]]
+  };
+}
+
+function mod(value, divisor) {
+  (0, _assert2.default)(Number.isFinite(value) && Number.isFinite(divisor));
+  var modulus = value % divisor;
+  return modulus < 0 ? divisor + modulus : modulus;
+}
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi4uLy4uLy4uL3NyYy9jb3JlL3V0aWxzL21hdGgtdXRpbHMuanMiXSwibmFtZXMiOlsidHJhbnNmb3JtVmVjdG9yIiwiY3JlYXRlTWF0NCIsImV4dHJhY3RDYW1lcmFWZWN0b3JzIiwibW9kIiwibWF0cml4IiwidmVjdG9yIiwicmVzdWx0Iiwic2NhbGUiLCJ2aWV3TWF0cml4Iiwidmlld01hdHJpeEludmVyc2UiLCJleWUiLCJkaXJlY3Rpb24iLCJ1cCIsInZhbHVlIiwiZGl2aXNvciIsIk51bWJlciIsImlzRmluaXRlIiwibW9kdWx1cyJdLCJtYXBwaW5ncyI6Ijs7Ozs7UUFNZ0JBLGUsR0FBQUEsZTtRQVlBQyxVLEdBQUFBLFU7UUFLQUMsb0IsR0FBQUEsb0I7UUFTQUMsRyxHQUFBQSxHOztBQTlCaEI7Ozs7QUFDQTs7OztBQUNBOzs7Ozs7QUFFTyxTQUFTSCxlQUFULENBQXlCSSxNQUF6QixFQUFpQ0MsTUFBakMsRUFBeUM7QUFDOUM7QUFDQSxNQUFJLENBQUNELE1BQUwsRUFBYTtBQUNYLFdBQU8sSUFBUDtBQUNEO0FBQ0QsTUFBTUUsU0FBUyw0QkFBbUIsQ0FBQyxDQUFELEVBQUksQ0FBSixFQUFPLENBQVAsRUFBVSxDQUFWLENBQW5CLEVBQWlDRCxNQUFqQyxFQUF5Q0QsTUFBekMsQ0FBZjtBQUNBLE1BQU1HLFFBQVEsSUFBSUQsT0FBTyxDQUFQLENBQWxCO0FBQ0EsMEJBQWNBLE1BQWQsRUFBc0JBLE1BQXRCLEVBQThCLENBQUNDLEtBQUQsRUFBUUEsS0FBUixFQUFlQSxLQUFmLEVBQXNCQSxLQUF0QixDQUE5QjtBQUNBLFNBQU9ELE1BQVA7QUFDRDs7QUFFRDtBQWpCQTs7QUFrQk8sU0FBU0wsVUFBVCxHQUFzQjtBQUMzQixTQUFPLENBQUMsQ0FBRCxFQUFJLENBQUosRUFBTyxDQUFQLEVBQVUsQ0FBVixFQUFhLENBQWIsRUFBZ0IsQ0FBaEIsRUFBbUIsQ0FBbkIsRUFBc0IsQ0FBdEIsRUFBeUIsQ0FBekIsRUFBNEIsQ0FBNUIsRUFBK0IsQ0FBL0IsRUFBa0MsQ0FBbEMsRUFBcUMsQ0FBckMsRUFBd0MsQ0FBeEMsRUFBMkMsQ0FBM0MsRUFBOEMsQ0FBOUMsQ0FBUDtBQUNEOztBQUVEO0FBQ08sU0FBU0Msb0JBQVQsT0FBK0Q7QUFBQSxNQUFoQ00sVUFBZ0MsUUFBaENBLFVBQWdDO0FBQUEsTUFBcEJDLGlCQUFvQixRQUFwQkEsaUJBQW9COztBQUNwRTtBQUNBLFNBQU87QUFDTEMsU0FBSyxDQUFDRCxrQkFBa0IsRUFBbEIsQ0FBRCxFQUF3QkEsa0JBQWtCLEVBQWxCLENBQXhCLEVBQStDQSxrQkFBa0IsRUFBbEIsQ0FBL0MsQ0FEQTtBQUVMRSxlQUFXLENBQUNILFdBQVcsQ0FBWCxDQUFELEVBQWdCQSxXQUFXLENBQVgsQ0FBaEIsRUFBK0JBLFdBQVcsRUFBWCxDQUEvQixDQUZOO0FBR0xJLFFBQUksQ0FBQ0osV0FBVyxDQUFYLENBQUQsRUFBZ0JBLFdBQVcsQ0FBWCxDQUFoQixFQUErQkEsV0FBVyxDQUFYLENBQS9CO0FBSEMsR0FBUDtBQUtEOztBQUVNLFNBQVNMLEdBQVQsQ0FBYVUsS0FBYixFQUFvQkMsT0FBcEIsRUFBNkI7QUFDbEMsd0JBQU9DLE9BQU9DLFFBQVAsQ0FBZ0JILEtBQWhCLEtBQTBCRSxPQUFPQyxRQUFQLENBQWdCRixPQUFoQixDQUFqQztBQUNBLE1BQU1HLFVBQVVKLFFBQVFDLE9BQXhCO0FBQ0EsU0FBT0csVUFBVSxDQUFWLEdBQWNILFVBQVVHLE9BQXhCLEdBQWtDQSxPQUF6QztBQUNEIiwiZmlsZSI6Im1hdGgtdXRpbHMuanMiLCJzb3VyY2VzQ29udGVudCI6WyIvLyBFeHRlbnNpb25zIHRvIG1hdGguZ2wgbGlicmFyeS4gSW50ZW5kZWQgdG8gYmUgZm9sZGVkIGJhY2suXG5cbmltcG9ydCB2ZWM0X211bHRpcGx5IGZyb20gJ2dsLXZlYzQvbXVsdGlwbHknO1xuaW1wb3J0IHZlYzRfdHJhbnNmb3JtTWF0NCBmcm9tICdnbC12ZWM0L3RyYW5zZm9ybU1hdDQnO1xuaW1wb3J0IGFzc2VydCBmcm9tICdhc3NlcnQnO1xuXG5leHBvcnQgZnVuY3Rpb24gdHJhbnNmb3JtVmVjdG9yKG1hdHJpeCwgdmVjdG9yKSB7XG4gIC8vIEhhbmRsZSBub24taW52ZXJ0aWJsZSBtYXRyaXhcbiAgaWYgKCFtYXRyaXgpIHtcbiAgICByZXR1cm4gbnVsbDtcbiAgfVxuICBjb25zdCByZXN1bHQgPSB2ZWM0X3RyYW5zZm9ybU1hdDQoWzAsIDAsIDAsIDBdLCB2ZWN0b3IsIG1hdHJpeCk7XG4gIGNvbnN0IHNjYWxlID0gMSAvIHJlc3VsdFszXTtcbiAgdmVjNF9tdWx0aXBseShyZXN1bHQsIHJlc3VsdCwgW3NjYWxlLCBzY2FsZSwgc2NhbGUsIHNjYWxlXSk7XG4gIHJldHVybiByZXN1bHQ7XG59XG5cbi8vIEhlbHBlciwgYXZvaWRzIGxvdy1wcmVjaXNpb24gMzIgYml0IG1hdHJpY2VzIGZyb20gZ2wtbWF0cml4IG1hdDQuY3JlYXRlKClcbmV4cG9ydCBmdW5jdGlvbiBjcmVhdGVNYXQ0KCkge1xuICByZXR1cm4gWzEsIDAsIDAsIDAsIDAsIDEsIDAsIDAsIDAsIDAsIDEsIDAsIDAsIDAsIDAsIDFdO1xufVxuXG4vLyBFeHRyYWN0IGNhbWVyYSB2ZWN0b3JzIChtb3ZlIHRvIG1hdGggbGlicmFyeT8pXG5leHBvcnQgZnVuY3Rpb24gZXh0cmFjdENhbWVyYVZlY3RvcnMoe3ZpZXdNYXRyaXgsIHZpZXdNYXRyaXhJbnZlcnNlfSkge1xuICAvLyBSZWFkIHRoZSB0cmFuc2xhdGlvbiBmcm9tIHRoZSBpbnZlcnNlIHZpZXcgbWF0cml4XG4gIHJldHVybiB7XG4gICAgZXllOiBbdmlld01hdHJpeEludmVyc2VbMTJdLCB2aWV3TWF0cml4SW52ZXJzZVsxM10sIHZpZXdNYXRyaXhJbnZlcnNlWzE0XV0sXG4gICAgZGlyZWN0aW9uOiBbdmlld01hdHJpeFsyXSwgdmlld01hdHJpeFs2XSwgdmlld01hdHJpeFsxMF1dLFxuICAgIHVwOiBbdmlld01hdHJpeFsxXSwgdmlld01hdHJpeFs1XSwgdmlld01hdHJpeFs5XV1cbiAgfTtcbn1cblxuZXhwb3J0IGZ1bmN0aW9uIG1vZCh2YWx1ZSwgZGl2aXNvcikge1xuICBhc3NlcnQoTnVtYmVyLmlzRmluaXRlKHZhbHVlKSAmJiBOdW1iZXIuaXNGaW5pdGUoZGl2aXNvcikpO1xuICBjb25zdCBtb2R1bHVzID0gdmFsdWUgJSBkaXZpc29yO1xuICByZXR1cm4gbW9kdWx1cyA8IDAgPyBkaXZpc29yICsgbW9kdWx1cyA6IG1vZHVsdXM7XG59XG4iXX0=

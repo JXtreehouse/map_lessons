@@ -1,0 +1,152 @@
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.pointToDensityGridData = pointToDensityGridData;
+// Copyright (c) 2015 - 2017 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+var R_EARTH = 6378000;
+
+/**
+ * Calculate density grid from an array of points
+ * @param {array} points
+ * @param {number} cellSize - cell size in meters
+ * @param {function} getPosition - position accessor
+ * @returns {object} - grid data, cell dimension
+ */
+function pointToDensityGridData(points, cellSize, getPosition) {
+  var _pointsToGridHashing2 = _pointsToGridHashing(points, cellSize, getPosition),
+      gridHash = _pointsToGridHashing2.gridHash,
+      gridOffset = _pointsToGridHashing2.gridOffset;
+
+  var layerData = _getGridLayerDataFromGridHash(gridHash, gridOffset);
+
+  return {
+    gridOffset: gridOffset,
+    layerData: layerData
+  };
+}
+
+/**
+ * Project points into each cell, return a hash table of cells
+ * @param {array} points
+ * @param {number} cellSize - unit size in meters
+ * @param {function} getPosition - position accessor
+ * @returns {object} - grid hash and cell dimension
+ */
+function _pointsToGridHashing() {
+  var points = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
+  var cellSize = arguments[1];
+  var getPosition = arguments[2];
+
+  // find the geometric center of sample points
+  var latMin = Infinity;
+  var latMax = -Infinity;
+  var pLat = void 0;
+
+  for (var p = 0; p < points.length; p++) {
+    pLat = getPosition(points[p])[1];
+    if (Number.isFinite(pLat)) {
+      latMin = pLat < latMin ? pLat : latMin;
+      latMax = pLat > latMax ? pLat : latMax;
+    }
+  }
+
+  var centerLat = (latMin + latMax) / 2;
+
+  var gridOffset = _calculateGridLatLonOffset(cellSize, centerLat);
+
+  if (gridOffset.xOffset <= 0 || gridOffset.yOffset <= 0) {
+    return { gridHash: {}, gridOffset: gridOffset };
+  }
+  // calculate count per cell
+  var gridHash = points.reduce(function (accu, pt) {
+    var lat = getPosition(pt)[1];
+    var lng = getPosition(pt)[0];
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return accu;
+    }
+
+    var latIdx = Math.floor((lat + 90) / gridOffset.yOffset);
+    var lonIdx = Math.floor((lng + 180) / gridOffset.xOffset);
+    var key = latIdx + '-' + lonIdx;
+
+    accu[key] = accu[key] || { count: 0, points: [] };
+    accu[key].count += 1;
+    accu[key].points.push(pt);
+
+    return accu;
+  }, {});
+
+  return { gridHash: gridHash, gridOffset: gridOffset };
+}
+
+function _getGridLayerDataFromGridHash(gridHash, gridOffset) {
+  return Object.keys(gridHash).reduce(function (accu, key, i) {
+    var idxs = key.split('-');
+    var latIdx = parseInt(idxs[0], 10);
+    var lonIdx = parseInt(idxs[1], 10);
+
+    accu.push(Object.assign({
+      index: i,
+      position: [-180 + gridOffset.xOffset * lonIdx, -90 + gridOffset.yOffset * latIdx]
+    }, gridHash[key]));
+
+    return accu;
+  }, []);
+}
+
+/**
+ * calculate grid layer cell size in lat lon based on world unit size
+ * and current latitude
+ * @param {number} cellSize
+ * @param {number} latitude
+ * @returns {object} - lat delta and lon delta
+ */
+function _calculateGridLatLonOffset(cellSize, latitude) {
+  var yOffset = _calculateLatOffset(cellSize);
+  var xOffset = _calculateLonOffset(latitude, cellSize);
+  return { yOffset: yOffset, xOffset: xOffset };
+}
+
+/**
+ * with a given x-km change, calculate the increment of latitude
+ * based on stackoverflow http://stackoverflow.com/questions/7477003
+ * @param {number} dy - change in km
+ * @return {number} - increment in latitude
+ */
+function _calculateLatOffset(dy) {
+  return dy / R_EARTH * (180 / Math.PI);
+}
+
+/**
+ * with a given x-km change, and current latitude
+ * calculate the increment of longitude
+ * based on stackoverflow http://stackoverflow.com/questions/7477003
+ * @param {number} lat - latitude of current location (based on city)
+ * @param {number} dx - change in km
+ * @return {number} - increment in longitude
+ */
+function _calculateLonOffset(lat, dx) {
+  return dx / R_EARTH * (180 / Math.PI) / Math.cos(lat * Math.PI / 180);
+}
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi4uLy4uLy4uL3NyYy9jb3JlLWxheWVycy9ncmlkLWxheWVyL2dyaWQtYWdncmVnYXRvci5qcyJdLCJuYW1lcyI6WyJwb2ludFRvRGVuc2l0eUdyaWREYXRhIiwiUl9FQVJUSCIsInBvaW50cyIsImNlbGxTaXplIiwiZ2V0UG9zaXRpb24iLCJfcG9pbnRzVG9HcmlkSGFzaGluZyIsImdyaWRIYXNoIiwiZ3JpZE9mZnNldCIsImxheWVyRGF0YSIsIl9nZXRHcmlkTGF5ZXJEYXRhRnJvbUdyaWRIYXNoIiwibGF0TWluIiwiSW5maW5pdHkiLCJsYXRNYXgiLCJwTGF0IiwicCIsImxlbmd0aCIsIk51bWJlciIsImlzRmluaXRlIiwiY2VudGVyTGF0IiwiX2NhbGN1bGF0ZUdyaWRMYXRMb25PZmZzZXQiLCJ4T2Zmc2V0IiwieU9mZnNldCIsInJlZHVjZSIsImFjY3UiLCJwdCIsImxhdCIsImxuZyIsImxhdElkeCIsIk1hdGgiLCJmbG9vciIsImxvbklkeCIsImtleSIsImNvdW50IiwicHVzaCIsIk9iamVjdCIsImtleXMiLCJpIiwiaWR4cyIsInNwbGl0IiwicGFyc2VJbnQiLCJhc3NpZ24iLCJpbmRleCIsInBvc2l0aW9uIiwibGF0aXR1ZGUiLCJfY2FsY3VsYXRlTGF0T2Zmc2V0IiwiX2NhbGN1bGF0ZUxvbk9mZnNldCIsImR5IiwiUEkiLCJkeCIsImNvcyJdLCJtYXBwaW5ncyI6Ijs7Ozs7UUE0QmdCQSxzQixHQUFBQSxzQjtBQTVCaEI7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQSxJQUFNQyxVQUFVLE9BQWhCOztBQUVBOzs7Ozs7O0FBT08sU0FBU0Qsc0JBQVQsQ0FBZ0NFLE1BQWhDLEVBQXdDQyxRQUF4QyxFQUFrREMsV0FBbEQsRUFBK0Q7QUFBQSw4QkFDckNDLHFCQUFxQkgsTUFBckIsRUFBNkJDLFFBQTdCLEVBQXVDQyxXQUF2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QUFsQixDQUFmO0FBQ0EsUUFBTVAsU0FBU1MsU0FBU0YsS0FBSyxDQUFMLENBQVQsRUFBa0IsRUFBbEIsQ0FBZjs7QUFFQWQsU0FBS1UsSUFBTCxDQUNFQyxPQUFPTSxNQUFQLENBQ0U7QUFDRUMsYUFBT0wsQ0FEVDtBQUVFTSxnQkFBVSxDQUFDLENBQUMsR0FBRCxHQUFPbkMsV0FBV2EsT0FBWCxHQUFxQlUsTUFBN0IsRUFBcUMsQ0FBQyxFQUFELEdBQU12QixXQUFXYyxPQUFYLEdBQXFCTSxNQUFoRTtBQUZaLEtBREYsRUFLRXJCLFNBQVN5QixHQUFULENBTEYsQ0FERjs7QUFVQSxXQUFPUixJQUFQO0FBQ0QsR0FoQk0sRUFnQkosRUFoQkksQ0FBUDtBQWlCRDs7QUFFRDs7Ozs7OztBQU9BLFNBQVNKLDBCQUFULENBQW9DaEIsUUFBcEMsRUFBOEN3QyxRQUE5QyxFQUF3RDtBQUN0RCxNQUFNdEIsVUFBVXVCLG9CQUFvQnpDLFFBQXBCLENBQWhCO0FBQ0EsTUFBTWlCLFVBQVV5QixvQkFBb0JGLFFBQXBCLEVBQThCeEMsUUFBOUIsQ0FBaEI7QUFDQSxTQUFPLEVBQUNrQixnQkFBRCxFQUFVRCxnQkFBVixFQUFQO0FBQ0Q7O0FBRUQ7Ozs7OztBQU1BLFNBQVN3QixtQkFBVCxDQUE2QkUsRUFBN0IsRUFBaUM7QUFDL0IsU0FBT0EsS0FBSzdDLE9BQUwsSUFBZ0IsTUFBTTJCLEtBQUttQixFQUEzQixDQUFQO0FBQ0Q7O0FBRUQ7Ozs7Ozs7O0FBUUEsU0FBU0YsbUJBQVQsQ0FBNkJwQixHQUE3QixFQUFrQ3VCLEVBQWxDLEVBQXNDO0FBQ3BDLFNBQU9BLEtBQUsvQyxPQUFMLElBQWdCLE1BQU0yQixLQUFLbUIsRUFBM0IsSUFBaUNuQixLQUFLcUIsR0FBTCxDQUFTeEIsTUFBTUcsS0FBS21CLEVBQVgsR0FBZ0IsR0FBekIsQ0FBeEM7QUFDRCIsImZpbGUiOiJncmlkLWFnZ3JlZ2F0b3IuanMiLCJzb3VyY2VzQ29udGVudCI6WyIvLyBDb3B5cmlnaHQgKGMpIDIwMTUgLSAyMDE3IFViZXIgVGVjaG5vbG9naWVzLCBJbmMuXG4vL1xuLy8gUGVybWlzc2lvbiBpcyBoZXJlYnkgZ3JhbnRlZCwgZnJlZSBvZiBjaGFyZ2UsIHRvIGFueSBwZXJzb24gb2J0YWluaW5nIGEgY29weVxuLy8gb2YgdGhpcyBzb2Z0d2FyZSBhbmQgYXNzb2NpYXRlZCBkb2N1bWVudGF0aW9uIGZpbGVzICh0aGUgXCJTb2Z0d2FyZVwiKSwgdG8gZGVhbFxuLy8gaW4gdGhlIFNvZnR3YXJlIHdpdGhvdXQgcmVzdHJpY3Rpb24sIGluY2x1ZGluZyB3aXRob3V0IGxpbWl0YXRpb24gdGhlIHJpZ2h0c1xuLy8gdG8gdXNlLCBjb3B5LCBtb2RpZnksIG1lcmdlLCBwdWJsaXNoLCBkaXN0cmlidXRlLCBzdWJsaWNlbnNlLCBhbmQvb3Igc2VsbFxuLy8gY29waWVzIG9mIHRoZSBTb2Z0d2FyZSwgYW5kIHRvIHBlcm1pdCBwZXJzb25zIHRvIHdob20gdGhlIFNvZnR3YXJlIGlzXG4vLyBmdXJuaXNoZWQgdG8gZG8gc28sIHN1YmplY3QgdG8gdGhlIGZvbGxvd2luZyBjb25kaXRpb25zOlxuLy9cbi8vIFRoZSBhYm92ZSBjb3B5cmlnaHQgbm90aWNlIGFuZCB0aGlzIHBlcm1pc3Npb24gbm90aWNlIHNoYWxsIGJlIGluY2x1ZGVkIGluXG4vLyBhbGwgY29waWVzIG9yIHN1YnN0YW50aWFsIHBvcnRpb25zIG9mIHRoZSBTb2Z0d2FyZS5cbi8vXG4vLyBUSEUgU09GVFdBUkUgSVMgUFJPVklERUQgXCJBUyBJU1wiLCBXSVRIT1VUIFdBUlJBTlRZIE9GIEFOWSBLSU5ELCBFWFBSRVNTIE9SXG4vLyBJTVBMSUVELCBJTkNMVURJTkcgQlVUIE5PVCBMSU1JVEVEIFRPIFRIRSBXQVJSQU5USUVTIE9GIE1FUkNIQU5UQUJJTElUWSxcbi8vIEZJVE5FU1MgRk9SIEEgUEFSVElDVUxBUiBQVVJQT1NFIEFORCBOT05JTkZSSU5HRU1FTlQuIElOIE5PIEVWRU5UIFNIQUxMIFRIRVxuLy8gQVVUSE9SUyBPUiBDT1BZUklHSFQgSE9MREVSUyBCRSBMSUFCTEUgRk9SIEFOWSBDTEFJTSwgREFNQUdFUyBPUiBPVEhFUlxuLy8gTElBQklMSVRZLCBXSEVUSEVSIElOIEFOIEFDVElPTiBPRiBDT05UUkFDVCwgVE9SVCBPUiBPVEhFUldJU0UsIEFSSVNJTkcgRlJPTSxcbi8vIE9VVCBPRiBPUiBJTiBDT05ORUNUSU9OIFdJVEggVEhFIFNPRlRXQVJFIE9SIFRIRSBVU0UgT1IgT1RIRVIgREVBTElOR1MgSU5cbi8vIFRIRSBTT0ZUV0FSRS5cbmNvbnN0IFJfRUFSVEggPSA2Mzc4MDAwO1xuXG4vKipcbiAqIENhbGN1bGF0ZSBkZW5zaXR5IGdyaWQgZnJvbSBhbiBhcnJheSBvZiBwb2ludHNcbiAqIEBwYXJhbSB7YXJyYXl9IHBvaW50c1xuICogQHBhcmFtIHtudW1iZXJ9IGNlbGxTaXplIC0gY2VsbCBzaXplIGluIG1ldGVyc1xuICogQHBhcmFtIHtmdW5jdGlvbn0gZ2V0UG9zaXRpb24gLSBwb3NpdGlvbiBhY2Nlc3NvclxuICogQHJldHVybnMge29iamVjdH0gLSBncmlkIGRhdGEsIGNlbGwgZGltZW5zaW9uXG4gKi9cbmV4cG9ydCBmdW5jdGlvbiBwb2ludFRvRGVuc2l0eUdyaWREYXRhKHBvaW50cywgY2VsbFNpemUsIGdldFBvc2l0aW9uKSB7XG4gIGNvbnN0IHtncmlkSGFzaCwgZ3JpZE9mZnNldH0gPSBfcG9pbnRzVG9HcmlkSGFzaGluZyhwb2ludHMsIGNlbGxTaXplLCBnZXRQb3NpdGlvbik7XG4gIGNvbnN0IGxheWVyRGF0YSA9IF9nZXRHcmlkTGF5ZXJEYXRhRnJvbUdyaWRIYXNoKGdyaWRIYXNoLCBncmlkT2Zmc2V0KTtcblxuICByZXR1cm4ge1xuICAgIGdyaWRPZmZzZXQsXG4gICAgbGF5ZXJEYXRhXG4gIH07XG59XG5cbi8qKlxuICogUHJvamVjdCBwb2ludHMgaW50byBlYWNoIGNlbGwsIHJldHVybiBhIGhhc2ggdGFibGUgb2YgY2VsbHNcbiAqIEBwYXJhbSB7YXJyYXl9IHBvaW50c1xuICogQHBhcmFtIHtudW1iZXJ9IGNlbGxTaXplIC0gdW5pdCBzaXplIGluIG1ldGVyc1xuICogQHBhcmFtIHtmdW5jdGlvbn0gZ2V0UG9zaXRpb24gLSBwb3NpdGlvbiBhY2Nlc3NvclxuICogQHJldHVybnMge29iamVjdH0gLSBncmlkIGhhc2ggYW5kIGNlbGwgZGltZW5zaW9uXG4gKi9cbmZ1bmN0aW9uIF9wb2ludHNUb0dyaWRIYXNoaW5nKHBvaW50cyA9IFtdLCBjZWxsU2l6ZSwgZ2V0UG9zaXRpb24pIHtcbiAgLy8gZmluZCB0aGUgZ2VvbWV0cmljIGNlbnRlciBvZiBzYW1wbGUgcG9pbnRzXG4gIGxldCBsYXRNaW4gPSBJbmZpbml0eTtcbiAgbGV0IGxhdE1heCA9IC1JbmZpbml0eTtcbiAgbGV0IHBMYXQ7XG5cbiAgZm9yIChsZXQgcCA9IDA7IHAgPCBwb2ludHMubGVuZ3RoOyBwKyspIHtcbiAgICBwTGF0ID0gZ2V0UG9zaXRpb24ocG9pbnRzW3BdKVsxXTtcbiAgICBpZiAoTnVtYmVyLmlzRmluaXRlKHBMYXQpKSB7XG4gICAgICBsYXRNaW4gPSBwTGF0IDwgbGF0TWluID8gcExhdCA6IGxhdE1pbjtcbiAgICAgIGxhdE1heCA9IHBMYXQgPiBsYXRNYXggPyBwTGF0IDogbGF0TWF4O1xuICAgIH1cbiAgfVxuXG4gIGNvbnN0IGNlbnRlckxhdCA9IChsYXRNaW4gKyBsYXRNYXgpIC8gMjtcblxuICBjb25zdCBncmlkT2Zmc2V0ID0gX2NhbGN1bGF0ZUdyaWRMYXRMb25PZmZzZXQoY2VsbFNpemUsIGNlbnRlckxhdCk7XG5cbiAgaWYgKGdyaWRPZmZzZXQueE9mZnNldCA8PSAwIHx8IGdyaWRPZmZzZXQueU9mZnNldCA8PSAwKSB7XG4gICAgcmV0dXJuIHtncmlkSGFzaDoge30sIGdyaWRPZmZzZXR9O1xuICB9XG4gIC8vIGNhbGN1bGF0ZSBjb3VudCBwZXIgY2VsbFxuICBjb25zdCBncmlkSGFzaCA9IHBvaW50cy5yZWR1Y2UoKGFjY3UsIHB0KSA9PiB7XG4gICAgY29uc3QgbGF0ID0gZ2V0UG9zaXRpb24ocHQpWzFdO1xuICAgIGNvbnN0IGxuZyA9IGdldFBvc2l0aW9uKHB0KVswXTtcblxuICAgIGlmICghTnVtYmVyLmlzRmluaXRlKGxhdCkgfHwgIU51bWJlci5pc0Zpbml0ZShsbmcpKSB7XG4gICAgICByZXR1cm4gYWNjdTtcbiAgICB9XG5cbiAgICBjb25zdCBsYXRJZHggPSBNYXRoLmZsb29yKChsYXQgKyA5MCkgLyBncmlkT2Zmc2V0LnlPZmZzZXQpO1xuICAgIGNvbnN0IGxvbklkeCA9IE1hdGguZmxvb3IoKGxuZyArIDE4MCkgLyBncmlkT2Zmc2V0LnhPZmZzZXQpO1xuICAgIGNvbnN0IGtleSA9IGAke2xhdElkeH0tJHtsb25JZHh9YDtcblxuICAgIGFjY3Vba2V5XSA9IGFjY3Vba2V5XSB8fCB7Y291bnQ6IDAsIHBvaW50czogW119O1xuICAgIGFjY3Vba2V5XS5jb3VudCArPSAxO1xuICAgIGFjY3Vba2V5XS5wb2ludHMucHVzaChwdCk7XG5cbiAgICByZXR1cm4gYWNjdTtcbiAgfSwge30pO1xuXG4gIHJldHVybiB7Z3JpZEhhc2gsIGdyaWRPZmZzZXR9O1xufVxuXG5mdW5jdGlvbiBfZ2V0R3JpZExheWVyRGF0YUZyb21HcmlkSGFzaChncmlkSGFzaCwgZ3JpZE9mZnNldCkge1xuICByZXR1cm4gT2JqZWN0LmtleXMoZ3JpZEhhc2gpLnJlZHVjZSgoYWNjdSwga2V5LCBpKSA9PiB7XG4gICAgY29uc3QgaWR4cyA9IGtleS5zcGxpdCgnLScpO1xuICAgIGNvbnN0IGxhdElkeCA9IHBhcnNlSW50KGlkeHNbMF0sIDEwKTtcbiAgICBjb25zdCBsb25JZHggPSBwYXJzZUludChpZHhzWzFdLCAxMCk7XG5cbiAgICBhY2N1LnB1c2goXG4gICAgICBPYmplY3QuYXNzaWduKFxuICAgICAgICB7XG4gICAgICAgICAgaW5kZXg6IGksXG4gICAgICAgICAgcG9zaXRpb246IFstMTgwICsgZ3JpZE9mZnNldC54T2Zmc2V0ICogbG9uSWR4LCAtOTAgKyBncmlkT2Zmc2V0LnlPZmZzZXQgKiBsYXRJZHhdXG4gICAgICAgIH0sXG4gICAgICAgIGdyaWRIYXNoW2tleV1cbiAgICAgIClcbiAgICApO1xuXG4gICAgcmV0dXJuIGFjY3U7XG4gIH0sIFtdKTtcbn1cblxuLyoqXG4gKiBjYWxjdWxhdGUgZ3JpZCBsYXllciBjZWxsIHNpemUgaW4gbGF0IGxvbiBiYXNlZCBvbiB3b3JsZCB1bml0IHNpemVcbiAqIGFuZCBjdXJyZW50IGxhdGl0dWRlXG4gKiBAcGFyYW0ge251bWJlcn0gY2VsbFNpemVcbiAqIEBwYXJhbSB7bnVtYmVyfSBsYXRpdHVkZVxuICogQHJldHVybnMge29iamVjdH0gLSBsYXQgZGVsdGEgYW5kIGxvbiBkZWx0YVxuICovXG5mdW5jdGlvbiBfY2FsY3VsYXRlR3JpZExhdExvbk9mZnNldChjZWxsU2l6ZSwgbGF0aXR1ZGUpIHtcbiAgY29uc3QgeU9mZnNldCA9IF9jYWxjdWxhdGVMYXRPZmZzZXQoY2VsbFNpemUpO1xuICBjb25zdCB4T2Zmc2V0ID0gX2NhbGN1bGF0ZUxvbk9mZnNldChsYXRpdHVkZSwgY2VsbFNpemUpO1xuICByZXR1cm4ge3lPZmZzZXQsIHhPZmZzZXR9O1xufVxuXG4vKipcbiAqIHdpdGggYSBnaXZlbiB4LWttIGNoYW5nZSwgY2FsY3VsYXRlIHRoZSBpbmNyZW1lbnQgb2YgbGF0aXR1ZGVcbiAqIGJhc2VkIG9uIHN0YWNrb3ZlcmZsb3cgaHR0cDovL3N0YWNrb3ZlcmZsb3cuY29tL3F1ZXN0aW9ucy83NDc3MDAzXG4gKiBAcGFyYW0ge251bWJlcn0gZHkgLSBjaGFuZ2UgaW4ga21cbiAqIEByZXR1cm4ge251bWJlcn0gLSBpbmNyZW1lbnQgaW4gbGF0aXR1ZGVcbiAqL1xuZnVuY3Rpb24gX2NhbGN1bGF0ZUxhdE9mZnNldChkeSkge1xuICByZXR1cm4gZHkgLyBSX0VBUlRIICogKDE4MCAvIE1hdGguUEkpO1xufVxuXG4vKipcbiAqIHdpdGggYSBnaXZlbiB4LWttIGNoYW5nZSwgYW5kIGN1cnJlbnQgbGF0aXR1ZGVcbiAqIGNhbGN1bGF0ZSB0aGUgaW5jcmVtZW50IG9mIGxvbmdpdHVkZVxuICogYmFzZWQgb24gc3RhY2tvdmVyZmxvdyBodHRwOi8vc3RhY2tvdmVyZmxvdy5jb20vcXVlc3Rpb25zLzc0NzcwMDNcbiAqIEBwYXJhbSB7bnVtYmVyfSBsYXQgLSBsYXRpdHVkZSBvZiBjdXJyZW50IGxvY2F0aW9uIChiYXNlZCBvbiBjaXR5KVxuICogQHBhcmFtIHtudW1iZXJ9IGR4IC0gY2hhbmdlIGluIGttXG4gKiBAcmV0dXJuIHtudW1iZXJ9IC0gaW5jcmVtZW50IGluIGxvbmdpdHVkZVxuICovXG5mdW5jdGlvbiBfY2FsY3VsYXRlTG9uT2Zmc2V0KGxhdCwgZHgpIHtcbiAgcmV0dXJuIGR4IC8gUl9FQVJUSCAqICgxODAgLyBNYXRoLlBJKSAvIE1hdGguY29zKGxhdCAqIE1hdGguUEkgLyAxODApO1xufVxuIl19

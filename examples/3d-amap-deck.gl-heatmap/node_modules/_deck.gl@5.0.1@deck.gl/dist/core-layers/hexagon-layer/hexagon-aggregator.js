@@ -1,0 +1,90 @@
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.pointToHexbin = pointToHexbin;
+exports.getRadiusInPixel = getRadiusInPixel;
+
+var _d3Hexbin = require('d3-hexbin');
+
+/**
+ * Use d3-hexbin to performs hexagonal binning from geo points to hexagons
+ * @param {Array} data - array of points
+ * @param {Number} radius - hexagon radius in meter
+ * @param {function} getPosition - get points lon lat
+ * @param {Object} viewport - current viewport object
+
+ * @return {Object} - hexagons and countRange
+ */
+function pointToHexbin(_ref, viewport) {
+  var data = _ref.data,
+      radius = _ref.radius,
+      getPosition = _ref.getPosition;
+
+  // get hexagon radius in mercator world unit
+  var radiusInPixel = getRadiusInPixel(radius, viewport);
+
+  // add world space coordinates to points
+  var screenPoints = data.map(function (pt) {
+    return Object.assign({
+      screenCoord: viewport.projectFlat(getPosition(pt))
+    }, pt);
+  });
+
+  var newHexbin = (0, _d3Hexbin.hexbin)().radius(radiusInPixel).x(function (d) {
+    return d.screenCoord[0];
+  }).y(function (d) {
+    return d.screenCoord[1];
+  });
+
+  var hexagonBins = newHexbin(screenPoints);
+
+  return {
+    hexagons: hexagonBins.map(function (hex, index) {
+      return {
+        centroid: viewport.unprojectFlat([hex.x, hex.y]),
+        points: hex,
+        index: index
+      };
+    })
+  };
+}
+
+/**
+ * Get radius in mercator world space coordinates from meter
+ * @param {Number} radius - in meter
+ * @param {Object} viewport - current viewport object
+
+ * @return {Number} radius in mercator world spcae coordinates
+ */
+// Copyright (c) 2015 - 2017 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+function getRadiusInPixel(radius, viewport) {
+  var _viewport$getDistance = viewport.getDistanceScales(),
+      pixelsPerMeter = _viewport$getDistance.pixelsPerMeter;
+
+  // x, y distance should be the same
+
+
+  return radius * pixelsPerMeter[0];
+}
+//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi4uLy4uLy4uL3NyYy9jb3JlLWxheWVycy9oZXhhZ29uLWxheWVyL2hleGFnb24tYWdncmVnYXRvci5qcyJdLCJuYW1lcyI6WyJwb2ludFRvSGV4YmluIiwiZ2V0UmFkaXVzSW5QaXhlbCIsInZpZXdwb3J0IiwiZGF0YSIsInJhZGl1cyIsImdldFBvc2l0aW9uIiwicmFkaXVzSW5QaXhlbCIsInNjcmVlblBvaW50cyIsIm1hcCIsIk9iamVjdCIsImFzc2lnbiIsInNjcmVlbkNvb3JkIiwicHJvamVjdEZsYXQiLCJwdCIsIm5ld0hleGJpbiIsIngiLCJkIiwieSIsImhleGFnb25CaW5zIiwiaGV4YWdvbnMiLCJoZXgiLCJpbmRleCIsImNlbnRyb2lkIiwidW5wcm9qZWN0RmxhdCIsInBvaW50cyIsImdldERpc3RhbmNlU2NhbGVzIiwicGl4ZWxzUGVyTWV0ZXIiXSwibWFwcGluZ3MiOiI7Ozs7O1FBK0JnQkEsYSxHQUFBQSxhO1FBcUNBQyxnQixHQUFBQSxnQjs7QUFoRGhCOztBQUVBOzs7Ozs7Ozs7QUFTTyxTQUFTRCxhQUFULE9BQW9ERSxRQUFwRCxFQUE4RDtBQUFBLE1BQXRDQyxJQUFzQyxRQUF0Q0EsSUFBc0M7QUFBQSxNQUFoQ0MsTUFBZ0MsUUFBaENBLE1BQWdDO0FBQUEsTUFBeEJDLFdBQXdCLFFBQXhCQSxXQUF3Qjs7QUFDbkU7QUFDQSxNQUFNQyxnQkFBZ0JMLGlCQUFpQkcsTUFBakIsRUFBeUJGLFFBQXpCLENBQXRCOztBQUVBO0FBQ0EsTUFBTUssZUFBZUosS0FBS0ssR0FBTCxDQUFTO0FBQUEsV0FDNUJDLE9BQU9DLE1BQVAsQ0FDRTtBQUNFQyxtQkFBYVQsU0FBU1UsV0FBVCxDQUFxQlAsWUFBWVEsRUFBWixDQUFyQjtBQURmLEtBREYsRUFJRUEsRUFKRixDQUQ0QjtBQUFBLEdBQVQsQ0FBckI7O0FBU0EsTUFBTUMsWUFBWSx3QkFDZlYsTUFEZSxDQUNSRSxhQURRLEVBRWZTLENBRmUsQ0FFYjtBQUFBLFdBQUtDLEVBQUVMLFdBQUYsQ0FBYyxDQUFkLENBQUw7QUFBQSxHQUZhLEVBR2ZNLENBSGUsQ0FHYjtBQUFBLFdBQUtELEVBQUVMLFdBQUYsQ0FBYyxDQUFkLENBQUw7QUFBQSxHQUhhLENBQWxCOztBQUtBLE1BQU1PLGNBQWNKLFVBQVVQLFlBQVYsQ0FBcEI7O0FBRUEsU0FBTztBQUNMWSxjQUFVRCxZQUFZVixHQUFaLENBQWdCLFVBQUNZLEdBQUQsRUFBTUMsS0FBTjtBQUFBLGFBQWlCO0FBQ3pDQyxrQkFBVXBCLFNBQVNxQixhQUFULENBQXVCLENBQUNILElBQUlMLENBQUwsRUFBUUssSUFBSUgsQ0FBWixDQUF2QixDQUQrQjtBQUV6Q08sZ0JBQVFKLEdBRmlDO0FBR3pDQztBQUh5QyxPQUFqQjtBQUFBLEtBQWhCO0FBREwsR0FBUDtBQU9EOztBQUVEOzs7Ozs7O0FBN0RBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBOztBQWtETyxTQUFTcEIsZ0JBQVQsQ0FBMEJHLE1BQTFCLEVBQWtDRixRQUFsQyxFQUE0QztBQUFBLDhCQUN4QkEsU0FBU3VCLGlCQUFULEVBRHdCO0FBQUEsTUFDMUNDLGNBRDBDLHlCQUMxQ0EsY0FEMEM7O0FBR2pEOzs7QUFDQSxTQUFPdEIsU0FBU3NCLGVBQWUsQ0FBZixDQUFoQjtBQUNEIiwiZmlsZSI6ImhleGFnb24tYWdncmVnYXRvci5qcyIsInNvdXJjZXNDb250ZW50IjpbIi8vIENvcHlyaWdodCAoYykgMjAxNSAtIDIwMTcgVWJlciBUZWNobm9sb2dpZXMsIEluYy5cbi8vXG4vLyBQZXJtaXNzaW9uIGlzIGhlcmVieSBncmFudGVkLCBmcmVlIG9mIGNoYXJnZSwgdG8gYW55IHBlcnNvbiBvYnRhaW5pbmcgYSBjb3B5XG4vLyBvZiB0aGlzIHNvZnR3YXJlIGFuZCBhc3NvY2lhdGVkIGRvY3VtZW50YXRpb24gZmlsZXMgKHRoZSBcIlNvZnR3YXJlXCIpLCB0byBkZWFsXG4vLyBpbiB0aGUgU29mdHdhcmUgd2l0aG91dCByZXN0cmljdGlvbiwgaW5jbHVkaW5nIHdpdGhvdXQgbGltaXRhdGlvbiB0aGUgcmlnaHRzXG4vLyB0byB1c2UsIGNvcHksIG1vZGlmeSwgbWVyZ2UsIHB1Ymxpc2gsIGRpc3RyaWJ1dGUsIHN1YmxpY2Vuc2UsIGFuZC9vciBzZWxsXG4vLyBjb3BpZXMgb2YgdGhlIFNvZnR3YXJlLCBhbmQgdG8gcGVybWl0IHBlcnNvbnMgdG8gd2hvbSB0aGUgU29mdHdhcmUgaXNcbi8vIGZ1cm5pc2hlZCB0byBkbyBzbywgc3ViamVjdCB0byB0aGUgZm9sbG93aW5nIGNvbmRpdGlvbnM6XG4vL1xuLy8gVGhlIGFib3ZlIGNvcHlyaWdodCBub3RpY2UgYW5kIHRoaXMgcGVybWlzc2lvbiBub3RpY2Ugc2hhbGwgYmUgaW5jbHVkZWQgaW5cbi8vIGFsbCBjb3BpZXMgb3Igc3Vic3RhbnRpYWwgcG9ydGlvbnMgb2YgdGhlIFNvZnR3YXJlLlxuLy9cbi8vIFRIRSBTT0ZUV0FSRSBJUyBQUk9WSURFRCBcIkFTIElTXCIsIFdJVEhPVVQgV0FSUkFOVFkgT0YgQU5ZIEtJTkQsIEVYUFJFU1MgT1Jcbi8vIElNUExJRUQsIElOQ0xVRElORyBCVVQgTk9UIExJTUlURUQgVE8gVEhFIFdBUlJBTlRJRVMgT0YgTUVSQ0hBTlRBQklMSVRZLFxuLy8gRklUTkVTUyBGT1IgQSBQQVJUSUNVTEFSIFBVUlBPU0UgQU5EIE5PTklORlJJTkdFTUVOVC4gSU4gTk8gRVZFTlQgU0hBTEwgVEhFXG4vLyBBVVRIT1JTIE9SIENPUFlSSUdIVCBIT0xERVJTIEJFIExJQUJMRSBGT1IgQU5ZIENMQUlNLCBEQU1BR0VTIE9SIE9USEVSXG4vLyBMSUFCSUxJVFksIFdIRVRIRVIgSU4gQU4gQUNUSU9OIE9GIENPTlRSQUNULCBUT1JUIE9SIE9USEVSV0lTRSwgQVJJU0lORyBGUk9NLFxuLy8gT1VUIE9GIE9SIElOIENPTk5FQ1RJT04gV0lUSCBUSEUgU09GVFdBUkUgT1IgVEhFIFVTRSBPUiBPVEhFUiBERUFMSU5HUyBJTlxuLy8gVEhFIFNPRlRXQVJFLlxuXG5pbXBvcnQge2hleGJpbn0gZnJvbSAnZDMtaGV4YmluJztcblxuLyoqXG4gKiBVc2UgZDMtaGV4YmluIHRvIHBlcmZvcm1zIGhleGFnb25hbCBiaW5uaW5nIGZyb20gZ2VvIHBvaW50cyB0byBoZXhhZ29uc1xuICogQHBhcmFtIHtBcnJheX0gZGF0YSAtIGFycmF5IG9mIHBvaW50c1xuICogQHBhcmFtIHtOdW1iZXJ9IHJhZGl1cyAtIGhleGFnb24gcmFkaXVzIGluIG1ldGVyXG4gKiBAcGFyYW0ge2Z1bmN0aW9ufSBnZXRQb3NpdGlvbiAtIGdldCBwb2ludHMgbG9uIGxhdFxuICogQHBhcmFtIHtPYmplY3R9IHZpZXdwb3J0IC0gY3VycmVudCB2aWV3cG9ydCBvYmplY3RcblxuICogQHJldHVybiB7T2JqZWN0fSAtIGhleGFnb25zIGFuZCBjb3VudFJhbmdlXG4gKi9cbmV4cG9ydCBmdW5jdGlvbiBwb2ludFRvSGV4YmluKHtkYXRhLCByYWRpdXMsIGdldFBvc2l0aW9ufSwgdmlld3BvcnQpIHtcbiAgLy8gZ2V0IGhleGFnb24gcmFkaXVzIGluIG1lcmNhdG9yIHdvcmxkIHVuaXRcbiAgY29uc3QgcmFkaXVzSW5QaXhlbCA9IGdldFJhZGl1c0luUGl4ZWwocmFkaXVzLCB2aWV3cG9ydCk7XG5cbiAgLy8gYWRkIHdvcmxkIHNwYWNlIGNvb3JkaW5hdGVzIHRvIHBvaW50c1xuICBjb25zdCBzY3JlZW5Qb2ludHMgPSBkYXRhLm1hcChwdCA9PlxuICAgIE9iamVjdC5hc3NpZ24oXG4gICAgICB7XG4gICAgICAgIHNjcmVlbkNvb3JkOiB2aWV3cG9ydC5wcm9qZWN0RmxhdChnZXRQb3NpdGlvbihwdCkpXG4gICAgICB9LFxuICAgICAgcHRcbiAgICApXG4gICk7XG5cbiAgY29uc3QgbmV3SGV4YmluID0gaGV4YmluKClcbiAgICAucmFkaXVzKHJhZGl1c0luUGl4ZWwpXG4gICAgLngoZCA9PiBkLnNjcmVlbkNvb3JkWzBdKVxuICAgIC55KGQgPT4gZC5zY3JlZW5Db29yZFsxXSk7XG5cbiAgY29uc3QgaGV4YWdvbkJpbnMgPSBuZXdIZXhiaW4oc2NyZWVuUG9pbnRzKTtcblxuICByZXR1cm4ge1xuICAgIGhleGFnb25zOiBoZXhhZ29uQmlucy5tYXAoKGhleCwgaW5kZXgpID0+ICh7XG4gICAgICBjZW50cm9pZDogdmlld3BvcnQudW5wcm9qZWN0RmxhdChbaGV4LngsIGhleC55XSksXG4gICAgICBwb2ludHM6IGhleCxcbiAgICAgIGluZGV4XG4gICAgfSkpXG4gIH07XG59XG5cbi8qKlxuICogR2V0IHJhZGl1cyBpbiBtZXJjYXRvciB3b3JsZCBzcGFjZSBjb29yZGluYXRlcyBmcm9tIG1ldGVyXG4gKiBAcGFyYW0ge051bWJlcn0gcmFkaXVzIC0gaW4gbWV0ZXJcbiAqIEBwYXJhbSB7T2JqZWN0fSB2aWV3cG9ydCAtIGN1cnJlbnQgdmlld3BvcnQgb2JqZWN0XG5cbiAqIEByZXR1cm4ge051bWJlcn0gcmFkaXVzIGluIG1lcmNhdG9yIHdvcmxkIHNwY2FlIGNvb3JkaW5hdGVzXG4gKi9cbmV4cG9ydCBmdW5jdGlvbiBnZXRSYWRpdXNJblBpeGVsKHJhZGl1cywgdmlld3BvcnQpIHtcbiAgY29uc3Qge3BpeGVsc1Blck1ldGVyfSA9IHZpZXdwb3J0LmdldERpc3RhbmNlU2NhbGVzKCk7XG5cbiAgLy8geCwgeSBkaXN0YW5jZSBzaG91bGQgYmUgdGhlIHNhbWVcbiAgcmV0dXJuIHJhZGl1cyAqIHBpeGVsc1Blck1ldGVyWzBdO1xufVxuIl19
